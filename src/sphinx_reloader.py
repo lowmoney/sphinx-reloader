@@ -29,11 +29,13 @@ class SphinxReloader:
         self.observer = Observer()
 
         if not exists(self.sourcePath):
-            raise FileNotFoundError("\033[38;2;250;82;82;1msource directory could not be found\033[0m\nlooked at: {}\n".format(self.sourcePath))
+            raise FileNotFoundError("\n\033[38;2;250;82;82;1msource directory could not be found\033[0m\nlooked at: {}\n".format(self.sourcePath))
 
         if not exists(join(self.sourcePath, 'conf.py')):
-            raise FileNotFoundError("\033[38;2;250;82;82;1mconf.py file not found, not a valid Sphinx source directory\033[0m\nlooked at : {}\n".format(self.sourcePath))
+            raise FileNotFoundError("\n\033[38;2;250;82;82;1mconf.py file not found, not a valid Sphinx source directory\033[0m\nlooked at : {}\n".format(self.sourcePath))
 
+        if not exists(join(self.sourcePath, 'index.rst')):
+            raise FileNotFoundError("\n\033[38;2;250;82;82;1mindex.rst file not found, not a valid Sphinx source directory\033[0m\nlooked at : {}\n".format(self.sourcePath))
 
     def run(self):
         eventHandler = Handler(self.sourcePath, self.buildPath, self.buildFormat)
@@ -45,7 +47,8 @@ class SphinxReloader:
                 time.sleep(1)
         except KeyboardInterrupt:
             self.shutdown()
-        except Exception:
+        except Exception as e:
+            print(e)
             self.shutdown()
 
     def shutdown(self):
@@ -64,7 +67,8 @@ class Handler(FileSystemEventHandler):
 
     def _build(self):
         app = None
-        shutil.rmtree(self.build)
+
+        shutil.rmtree(self.build, ignore_errors=True)
 
         with patch_docutils(self.source), docutils_namespace():
             app = Sphinx(srcdir=self.source, confdir=self.source, doctreedir=self.build, outdir=self.build, buildername="html", status=None)
@@ -74,26 +78,24 @@ class Handler(FileSystemEventHandler):
         if app and app.statuscode==0:
             print("\033[38;2;55;178;77mbuild created, refreshing webpage\n\033[0m")
 
-    def on_any_event(self, event):
+    def on_modified(self, event):
         global lastBuild, building
 
         if event.is_directory:
             return
 
-        if event.event_type == 'modified':
+        if not building and time.time() - lastBuild > 1.5:
+            building = True
+            modifiedPath = event.src_path
 
-            if not building:
-                building = True
-                modifiedPath = event.src_path
+            print("\033[38;2;188;212;230;1mchange detected at source directory \u279D rebuilding project ({})\033[0m".format(datetime.now().time().strftime("%H:%m:%S")))
+            print(" \033[38;2;250;82;82;1m\u21B3 {}\n\033[0m".format(modifiedPath))
 
-                print("\033[38;2;188;212;230;1mchange detected at source directory \u279D rebuilding project ({})\033[0m".format(datetime.now().time().strftime("%H:%m:%S")))
-                print(" \033[38;2;250;82;82;1m\u21B3 {}\n\033[0m".format(modifiedPath))
+            self._build()
 
-                self._build()
-
-                building = False
-                
-                lastBuild = time.time()
+            building = False
+            
+            lastBuild = time.time()
 
 
 class ServerHandler(SimpleHTTPRequestHandler):
@@ -130,6 +132,8 @@ def main(argv = sys.argv[1:]):
     PORT = 8000
 
     sphinxWebServer = TCPServer(("127.0.0.1", PORT), ServerHandler)
+    webServerThread = None
+
 
     try:
         sphinxReloader = SphinxReloader(source_path=args.source, build_path=args.build, build_format=args.format)
@@ -141,9 +145,14 @@ def main(argv = sys.argv[1:]):
         print("\033[38;2;229;153;247mserving docs at: http://{}:{} \u2197\n\033[0m".format(sphinxWebServer.server_address[0], sphinxWebServer.server_address[1]))
 
         sphinxReloader.run()
+    except (KeyboardInterrupt, FileNotFoundError) as e:
+        print(e)
     finally:
-        sphinxWebServer.shutdown()
-        print("\nkilling server, if this takes too long press CTRL+C again")
+        if webServerThread:
+            if webServerThread.is_alive():
+                print("\nkilling server, if this takes too long press CTRL+C again")
+                sphinxWebServer.shutdown()
+        
         sys.exit()
 
 if __name__ == '__main__':
