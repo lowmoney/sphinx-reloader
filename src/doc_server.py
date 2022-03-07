@@ -1,6 +1,6 @@
 import time
 from http.server import SimpleHTTPRequestHandler
-import config
+import src.config as config
 
 
 class ServerHandler(SimpleHTTPRequestHandler):

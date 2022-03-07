@@ -3,7 +3,7 @@ import os, time, shutil, datetime
 from stat import S_ISDIR, S_ISREG
 from sphinx.application import Sphinx
 from sphinx.util.docutils import docutils_namespace, patch_docutils
-import config
+import src.config as config
 
 
 class File:

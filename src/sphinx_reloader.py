@@ -1,8 +1,8 @@
 import sys, threading, argparse
 from socketserver import TCPServer
 from os.path import exists, join
-from reloader import Watcher
-from doc_server import ServerHandler
+from src.reloader import Watcher
+from src.doc_server import ServerHandler
 
 DESCRIPTION = '''A tool that monitors your Sphinx source directory. When changes are made, the build folder is rebuilt for you to see the changes made. It also creates a simple HTTP server in the background to easly browse the built docs'''
 SOURCE = '''the absolute or relative directory where the doc files are being written to'''
