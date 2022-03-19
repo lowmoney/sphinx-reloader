@@ -1,4 +1,3 @@
-from __future__ import print_function
 import os, time, shutil, datetime
 from stat import S_ISDIR, S_ISREG
 from sphinx.application import Sphinx
