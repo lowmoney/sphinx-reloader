@@ -15,7 +15,7 @@ class ServerHandler(SimpleHTTPRequestHandler):
     def do_GET(self) -> None:
         if self.path == "/__reloader__":
             if config.lastReload < config.lastBuild:
-                print("webpage reload")
+                print("reloading webpage")
                 config.lastReload = time.time()
                 self._set_headers(205)
             else:

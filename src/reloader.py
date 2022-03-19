@@ -6,29 +6,53 @@ from sphinx.util.docutils import docutils_namespace, patch_docutils
 import src.config as config
 
 
-class File:
-    def __init__(self, lastModified:int, path:str) -> None:
-        self.last_modified = lastModified
-        self.path = path
+# class FileSnapshot:
+#     '''An object that represents a snapshot in time of a File'''
+#     def __init__(self, lastModified:int, path:str):
+#         '''
+#         Parameters
+#         ------------
+#         lastModified
+#             A int value that represents the time the File object was created
+#         path
+#             A string value that represents the path of the file for the file object
+#         '''
+#         self.last_modified = lastModified
+#         self.path = path
 
-    def _is_valid_operand(self, other):
-        return hasattr(other, "last_modified")
+#     def _is_valid_operand(self, other):
+#         return hasattr(other, "last_modified")
 
-    def __ne__(self, other) -> bool:
-        if self._is_valid_operand(other):
-            return self.last_modified != other.last_modified
-        else:
-            return NotImplemented
+#     def __ne__(self, other) -> bool:
+#         if self._is_valid_operand(other):
+#             return self.last_modified != other.last_modified
+#         else:
+#             return NotImplemented
 
 
 class DirectorySnapshot:
-    def __init__(self, path) -> None:
-        self.snapshot = {}
+    '''An object that represents a snapshot in time of files in a directory'''
+    def __init__(self, path:str) -> None:
+        '''
+        Parameters
+        -----------
+        path : str
+            The directory path to take a snapshot of
+        '''
+        self._snapshot = {}
         self.path = path
-        self.walk(self.path)
+        self.walk(self)
         self.modified_path = None
     
     def walk(self, path):
+        '''
+        Recursively walks the snapshot directory saving the times a file has been modified last and the path of the file
+
+        Parameters
+        -----------
+        path : str
+            The directory path to walk
+        '''
         for f in os.listdir(path):
             pathname = os.path.join(path,f)
             mode = os.stat(pathname).st_mode
@@ -36,28 +60,29 @@ class DirectorySnapshot:
             if S_ISDIR(mode):
                 self.walk(pathname)
             elif S_ISREG(mode):
-                file = File(os.stat(pathname).st_mtime, pathname)
-                self.snapshot[os.stat(pathname).st_ino] = file
+                file = {os.stat(pathname).st_mtime, pathname}
+                # file = FileSnapshot(os.stat(pathname).st_mtime, pathname)
+                self._snapshot[os.stat(pathname).st_ino] = file
 
     def _is_valid_operand(self, other):
-        if hasattr(other, "snapshot"):
-            if len(other.snapshot) > 0:
+        if hasattr(other, "_snapshot"):
+            if len(other._snapshot) > 0:
                 return True
         
         return False
 
     def __ne__(self, other) -> bool:
         if self._is_valid_operand(other):
-            for i in self.snapshot.keys():
-                if other.snapshot[i] != self.snapshot[i]:
-                    self.modified_path = self.snapshot[i].path
+            for i in self._snapshot.keys():
+                if other._snapshot[i][0] != self._snapshot[i][0]:
+                    self.modified_path = self._snapshot[i][1]
                     return True
             return False
         else:
             return NotImplemented
 
 class Watcher:
-    def __init__(self, source_path, build_path, interval = 1) -> None:
+    def __init__(self, source_path, build_path, interval = .5) -> None:
         self.source_path = source_path
         self.build_path = build_path
         self.interval = interval
@@ -68,13 +93,14 @@ class Watcher:
         try:
             while True:
                 app = None
-                snapshot_one = DirectorySnapshot(self.source_path)
+
+                snapshot_one:DirectorySnapshot = DirectorySnapshot(self.source_path)
                 time.sleep(self.interval)
-                snapshot_two = DirectorySnapshot(self.source_path)
+                snapshot_two:DirectorySnapshot = DirectorySnapshot(self.source_path)
 
                 if snapshot_one != snapshot_two:
-                    print("\033[38;2;188;212;230;1mchange detected at source directory \u279D rebuilding project ({})\033[0m".format(datetime.datetime.now().time().strftime("%H:%m:%S")))
-                    print(" \033[38;2;250;82;82;1m\u21B3 {}\n\033[0m".format(snapshot_one.modified_path))
+                    print(u"\u001b[38;5;201mchange detected at source directory \u279D rebuilding project ({})\u001b[0m".format(datetime.datetime.now().time().strftime("%H:%m:%S")))
+                    print(u" \u001b[38;5;208m\u21B3 {}\n\u001b[0m".format(snapshot_one.modified_path))
                     shutil.rmtree(self.build_path, ignore_errors=True)
 
                     with patch_docutils(self.source_path), docutils_namespace():
@@ -85,7 +111,7 @@ class Watcher:
                     if app:
                         if app.statuscode == 0:
                             config.lastBuild = time.time()
-                            print("\033[38;2;55;178;77mbuild created, refreshing webpage\n\033[0m")
+                            print(u"\u001b[38;5;28mbuild created, refreshing webpage on next check\n\u001b[0m")
 
         except KeyboardInterrupt:
             raise KeyboardInterrupt
