@@ -10,4 +10,4 @@ Sphinx Reloader also has a live reload feature built into the web server where i
 ## Install
 clone the repo and run `pip install .`
 
-Make sure you have [Sphinx](https://www.sphinx-doc.org/en/master/) and [Watchdog](https://pypi.org/project/watchdog/) installed
+Make sure you have [Sphinx](https://www.sphinx-doc.org/en/master/) installed
