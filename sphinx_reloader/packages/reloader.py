@@ -2,8 +2,7 @@ import os, time, shutil, datetime
 from stat import S_ISDIR, S_ISREG
 from sphinx.application import Sphinx
 from sphinx.util.docutils import docutils_namespace, patch_docutils
-import src.config as config
-
+from . import config
 
 # class FileSnapshot:
 #     '''An object that represents a snapshot in time of a File'''
@@ -40,7 +39,7 @@ class DirectorySnapshot:
         '''
         self._snapshot = {}
         self.path = path
-        self.walk(self)
+        self.walk(self.path)
         self.modified_path = None
     
     def walk(self, path):
@@ -59,7 +58,7 @@ class DirectorySnapshot:
             if S_ISDIR(mode):
                 self.walk(pathname)
             elif S_ISREG(mode):
-                file = {os.stat(pathname).st_mtime, pathname}
+                file = (os.stat(pathname).st_mtime, pathname)
                 # file = FileSnapshot(os.stat(pathname).st_mtime, pathname)
                 self._snapshot[os.stat(pathname).st_ino] = file
 

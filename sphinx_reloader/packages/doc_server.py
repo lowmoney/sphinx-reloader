@@ -1,6 +1,6 @@
 import time
 from http.server import SimpleHTTPRequestHandler
-import src.config as config
+from . import config
 
 
 class ServerHandler(SimpleHTTPRequestHandler):
@@ -15,7 +15,6 @@ class ServerHandler(SimpleHTTPRequestHandler):
     def do_GET(self) -> None:
         if self.path == "/__reloader__":
             if config.lastReload < config.lastBuild:
-                print("reloading webpage")
                 config.lastReload = time.time()
                 self._set_headers(205)
             else:

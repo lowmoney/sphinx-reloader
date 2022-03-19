@@ -1,18 +1,16 @@
 import sys, threading, argparse
 from socketserver import TCPServer
 from os.path import exists, join
-from src.reloader import Watcher
-from src.doc_server import ServerHandler
+from sphinx_reloader.packages.reloader import Watcher
+from sphinx_reloader.packages.doc_server import ServerHandler
 
 DESCRIPTION = '''A tool that monitors your Sphinx source directory. When changes are made, the build folder is rebuilt for you to see the changes made. It also creates a simple HTTP server in the background to easly browse the built docs'''
-SOURCE = '''the absolute or relative directory where the doc files are being written to'''
-BUILD = '''the absolute directory or relative where the doc files are rendered to'''
-FORMAT = '''the format of the build files (HTML, Markdown, PDF, etc.). The default is html'''
+SOURCE = '''the relative directory where the doc files are being written to'''
+BUILD = '''the relative directory where the doc files are rendered to'''
 
 parser = argparse.ArgumentParser(description=DESCRIPTION)
 parser.add_argument('source', help=SOURCE)
 parser.add_argument('build', help=BUILD)
-parser.add_argument('--format', '-f', type=str, help=FORMAT, default="html")
 
 
 class SphinxReloader:
@@ -21,13 +19,13 @@ class SphinxReloader:
         self.buildPath = build_path
 
         if not exists(self.sourcePath):
-            raise FileNotFoundError("\n\033[38;2;250;82;82;1msource directory could not be found\033[0m\nlooked at: {}\n".format(self.sourcePath))
+            raise FileNotFoundError(u"\n\u001b[38;5;1msource directory could not be found\u001b[0m\nlooked at: {}\n".format(self.sourcePath))
 
         if not exists(join(self.sourcePath, 'conf.py')):
-            raise FileNotFoundError("\n\033[38;2;250;82;82;1mconf.py file not found, not a valid Sphinx source directory\033[0m\nlooked at : {}\n".format(self.sourcePath))
+            raise FileNotFoundError(u"\n\u001b[38;5;1mconf.py file not found, not a valid Sphinx source directory\u001b[0m\nlooked at : {}\n".format(self.sourcePath))
 
         if not exists(join(self.sourcePath, 'index.rst')):
-            raise FileNotFoundError("\n\033[38;2;250;82;82;1mindex.rst file not found, not a valid Sphinx source directory\033[0m\nlooked at : {}\n".format(self.sourcePath))
+            raise FileNotFoundError(u"\n\u001b[38;5;1mindex.rst file not found, not a valid Sphinx source directory\u001b[0m\nlooked at : {}\n".format(self.sourcePath))
 
     def run(self):
         watcher = Watcher(self.sourcePath, self.buildPath)
@@ -39,7 +37,7 @@ class SphinxReloader:
         except Exception as e:
             raise e
 
-
+import traceback
 def main(argv = sys.argv[1:]):
     args = parser.parse_args(argv)
 
@@ -53,13 +51,13 @@ def main(argv = sys.argv[1:]):
 
 
     try:
-        sphinxReloader = SphinxReloader(source_path=args.source, build_path=args.build, build_format=args.format)
+        sphinxReloader = SphinxReloader(source_path=args.source, build_path=args.build)
 
         webServerThread = threading.Thread(target = sphinxWebServer.serve_forever)
         webServerThread.daemon = True
         webServerThread.start()
 
-        print("\033[38;2;229;153;247mserving docs at: http://{}:{} \u2197\n\033[0m".format(sphinxWebServer.server_address[0], sphinxWebServer.server_address[1]))
+        print(u"\u001b[38;5;183mserving docs at: http://{}:{} \u2197\n\u001b[0m".format(sphinxWebServer.server_address[0], sphinxWebServer.server_address[1]))
 
         sphinxReloader.run()
     except (KeyboardInterrupt, FileNotFoundError) as e:
